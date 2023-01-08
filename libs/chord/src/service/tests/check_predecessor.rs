@@ -2,9 +2,11 @@ use std::net::SocketAddr;
 use crate::client::{ClientError, MockClient};
 use crate::service::tests;
 use crate::NodeService;
+use crate::service::tests::{get_lock, MTX};
 
 #[tokio::test]
 async fn when_predecessor_is_up_it_should_not_be_removed() {
+    let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|addr: SocketAddr| {
@@ -32,6 +34,7 @@ async fn when_predecessor_is_up_it_should_not_be_removed() {
 
 #[tokio::test]
 async fn when_predecessor_is_down_it_should_be_removed() {
+    let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|addr: SocketAddr| {
@@ -59,6 +62,7 @@ async fn when_predecessor_is_down_it_should_be_removed() {
 
 #[tokio::test]
 async fn when_ping_fails_with_unexpected_error_predecessor_should_not_be_removed() {
+    let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|addr: SocketAddr| {

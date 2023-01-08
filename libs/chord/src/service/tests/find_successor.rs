@@ -2,9 +2,11 @@ use std::net::SocketAddr;
 use crate::client::MockClient;
 use crate::{Node, NodeService};
 use crate::service::tests;
+use crate::service::tests::{get_lock, MTX};
 
 #[tokio::test]
 async fn test_find_successor() {
+    let _m = get_lock(&MTX);
     let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
     let node = Node::new(8, addr);
     let service: NodeService<MockClient> = NodeService::new(node);
@@ -17,6 +19,7 @@ async fn test_find_successor() {
 
 #[tokio::test]
 async fn find_successor_with_2_nodes() {
+    let _m = get_lock(&MTX);
     let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
     let mut node = Node::new(8, addr);
     node.successor = tests::node_ref(16);

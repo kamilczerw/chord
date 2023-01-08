@@ -3,9 +3,11 @@ use mockall::predicate;
 use crate::client::{ClientError, MockClient};
 use crate::NodeService;
 use crate::service::tests;
+use crate::service::tests::{get_lock, MTX};
 
 #[tokio::test]
 async fn join_test() {
+    let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|addr: SocketAddr| {
@@ -31,6 +33,7 @@ async fn join_test() {
 
 #[tokio::test]
 async fn join_error_test() {
+    let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|addr: SocketAddr| {

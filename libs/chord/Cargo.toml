@@ -14,3 +14,4 @@ log = "0.4.17"
 
 [dev-dependencies]
 tokio = { version = "1.24.1", features = ["macros", "test-util"] }
+lazy_static = "1.4.0"

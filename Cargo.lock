@@ -39,6 +39,7 @@ name = "chord"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "lazy_static",
  "log",
  "mockall",
  "seahash",
