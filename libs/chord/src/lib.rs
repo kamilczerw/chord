@@ -79,6 +79,7 @@ impl Node {
 }
 
 /// A reference to a node in the chord ring
+#[derive(Clone)]
 pub struct NodeRef {
     id: u64,
     addr: SocketAddr
@@ -89,11 +90,15 @@ impl NodeRef {
         Self { id: hash(&addr.to_string().as_bytes()), addr }
     }
 
-    pub fn addr(&self) -> SocketAddr {
-        self.addr
-    }
-
     fn with_id(id: u64, addr: SocketAddr) -> Self {
         Self { id, addr }
+    }
+
+    pub fn client<C: Client>(&self) -> C {
+        C::init(self.addr)
+    }
+
+    pub fn addr(&self) -> SocketAddr {
+        self.addr
     }
 }

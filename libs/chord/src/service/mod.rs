@@ -31,68 +31,78 @@ impl<C: Client> NodeService<C> {
             Ok(self.node.successor.clone())
         } else {
             let client: C = self.closest_preceding_node(id).client();
-            client.find_successor(id).await.map_err(|e| e.into())
+            let successor = client.find_successor(id).await?;
+            Ok(successor)
         }
     }
 
-    fn closest_preceding_node(&self, _id: u64) -> NodeRef {
-        self.node.successor.clone()
+    fn closest_preceding_node(&self, _id: u64) -> &NodeRef {
+        &self.node.successor
     }
-
-    /// Join the chord ring.
-    ///
-    /// This method is used to join the chord ring. It will find the successor of its own id
-    /// and set it as the successor.
-    ///
-    /// # Arguments
-    ///
-    /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
-        todo!("not implemented")
-    }
-
-    /// Notify the node about a potential new predecessor.
-    ///
-    /// If the predecessor is not set or the given node is in the range of the current node and the
-    /// predecessor, the predecessor is set to the given node.
-    ///
-    /// # Arguments
-    ///
-    /// * `node` - The node which might be the new predecessor
-    pub fn notify(&mut self, node: NodeRef) {
-        todo!("not implemented")
-    }
-
-    /// Stabilize the node
-    ///
-    /// This method is used to stabilize the node. It will check if a predecessor of the successor
-    /// is in the range of the current node and its successor. If so, the successor will be set to
-    /// the retrieved predecessor.
-    ///
-    /// It will also notify the successor about the current node.
-    ///
-    /// > **Note**
-    /// >
-    /// > This method should be called periodically.
-    pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
-        todo!("not implemented")
-    }
-
-    /// Check predecessor
-    ///
-    /// This method is used to check if the predecessor is still alive. If not, the predecessor is
-    /// set to `None`.
-    ///
-    /// > **Note**
-    /// >
-    /// > This method should be called periodically.
-    pub async fn check_predecessor(&mut self) {
-        todo!("not implemented")
-    }
+    //
+    // /// Join the chord ring.
+    // ///
+    // /// This method is used to join the chord ring. It will find the successor of its own id
+    // /// and set it as the successor.
+    // ///
+    // /// # Arguments
+    // ///
+    // /// * `node` - The node to join the ring with. It's an existing node in the ring.
+    // pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
+    //     todo!("not implemented")
+    // }
+    //
+    // /// Notify the node about a potential new predecessor.
+    // ///
+    // /// If the predecessor is not set or the given node is in the range of the current node and the
+    // /// predecessor, the predecessor is set to the given node.
+    // ///
+    // /// # Arguments
+    // ///
+    // /// * `node` - The node which might be the new predecessor
+    // pub fn notify(&mut self, node: NodeRef) {
+    //     todo!("not implemented")
+    // }
+    //
+    // /// Stabilize the node
+    // ///
+    // /// This method is used to stabilize the node. It will check if a predecessor of the successor
+    // /// is in the range of the current node and its successor. If so, the successor will be set to
+    // /// the retrieved predecessor.
+    // ///
+    // /// It will also notify the successor about the current node.
+    // ///
+    // /// > **Note**
+    // /// >
+    // /// > This method should be called periodically.
+    // pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
+    //     todo!("not implemented")
+    // }
+    //
+    // /// Check predecessor
+    // ///
+    // /// This method is used to check if the predecessor is still alive. If not, the predecessor is
+    // /// set to `None`.
+    // ///
+    // /// > **Note**
+    // /// >
+    // /// > This method should be called periodically.
+    // pub async fn check_predecessor(&mut self) {
+    //     todo!("not implemented")
+    // }
 }
 
 pub mod error {
+    use crate::client;
+
+    #[derive(Debug)]
     pub enum ServiceError {
         Unexpected,
+    }
+
+    impl From<client::ClientError> for ServiceError {
+        fn from(_: client::ClientError) -> Self {
+            Self::Unexpected
+        }
     }
 }

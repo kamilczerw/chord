@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::net::SocketAddr;
 use crate::NodeRef;
 use mockall::automock;
 
@@ -10,8 +11,8 @@ pub trait Client {
     ///
     /// # Arguments
     ///
-    /// * `node` - The node to connect to
-    fn init(node: NodeRef) -> Self;
+    /// * `addr` - The node address to connect to
+    fn init(addr: SocketAddr) -> Self;
 
     /// Find a successor of a given id.
     ///
