@@ -3,6 +3,7 @@ mod tests;
 
 use std::marker::PhantomData;
 use crate::{Client, Node, NodeRef};
+use crate::client::ClientError;
 
 pub struct NodeService<C: Client> {
     node: Node,
@@ -95,18 +96,23 @@ impl<C: Client> NodeService<C> {
 
             Ok(())
         }
-    //
-    // /// Check predecessor
-    // ///
-    // /// This method is used to check if the predecessor is still alive. If not, the predecessor is
-    // /// set to `None`.
-    // ///
-    // /// > **Note**
-    // /// >
-    // /// > This method should be called periodically.
-    // pub async fn check_predecessor(&mut self) {
-    //     todo!("not implemented")
-    // }
+
+    /// Check predecessor
+    ///
+    /// This method is used to check if the predecessor is still alive. If not, the predecessor is
+    /// set to `None`.
+    ///
+    /// > **Note**
+    /// >
+    /// > This method should be called periodically.
+    pub async fn check_predecessor(&mut self) {
+        if let Some(predecessor) = &self.node.predecessor {
+            let client: C = predecessor.client();
+            if let Err(ClientError::ConnectionFailed(_)) = client.ping().await {
+                self.node.predecessor = None;
+            };
+        }
+    }
 }
 
 pub mod error {

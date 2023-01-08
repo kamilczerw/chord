@@ -5,6 +5,7 @@ mod find_successor;
 mod join;
 mod notify;
 mod stabilize;
+mod check_predecessor;
 
 fn node_ref(id: u64) -> NodeRef {
     node(id).node_ref()
