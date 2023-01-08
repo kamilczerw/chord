@@ -55,18 +55,20 @@ impl<C: Client> NodeService<C> {
 
         Ok(())
     }
-    //
-    // /// Notify the node about a potential new predecessor.
-    // ///
-    // /// If the predecessor is not set or the given node is in the range of the current node and the
-    // /// predecessor, the predecessor is set to the given node.
-    // ///
-    // /// # Arguments
-    // ///
-    // /// * `node` - The node which might be the new predecessor
-    // pub fn notify(&mut self, node: NodeRef) {
-    //     todo!("not implemented")
-    // }
+
+    /// Notify the node about a potential new predecessor.
+    ///
+    /// If the predecessor is not set or the given node is in the range of the current node and the
+    /// predecessor, the predecessor is set to the given node.
+    ///
+    /// # Arguments
+    ///
+    /// * `node` - The node which might be the new predecessor
+    pub fn notify(&mut self, node: NodeRef) {
+        if self.node.predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), self.node.predecessor.as_ref().unwrap().id, self.node.id) {
+            self.node.predecessor = Some(node);
+        }
+    }
     //
     // /// Stabilize the node
     // ///
