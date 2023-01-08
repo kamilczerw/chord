@@ -4,6 +4,7 @@ use crate::{Node, NodeRef};
 mod find_successor;
 mod join;
 mod notify;
+mod stabilize;
 
 fn node_ref(id: u64) -> NodeRef {
     node(id).node_ref()

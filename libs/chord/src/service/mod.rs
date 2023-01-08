@@ -69,21 +69,32 @@ impl<C: Client> NodeService<C> {
             self.node.predecessor = Some(node);
         }
     }
-    //
-    // /// Stabilize the node
-    // ///
-    // /// This method is used to stabilize the node. It will check if a predecessor of the successor
-    // /// is in the range of the current node and its successor. If so, the successor will be set to
-    // /// the retrieved predecessor.
-    // ///
-    // /// It will also notify the successor about the current node.
-    // ///
-    // /// > **Note**
-    // /// >
-    // /// > This method should be called periodically.
-    // pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
-    //     todo!("not implemented")
-    // }
+
+    /// Stabilize the node
+    ///
+    /// This method is used to stabilize the node. It will check if a predecessor of the successor
+    /// is in the range of the current node and its successor. If so, the successor will be set to
+    /// the retrieved predecessor.
+    ///
+    /// It will also notify the successor about the current node.
+    ///
+    /// > **Note**
+    /// >
+    /// > This method should be called periodically.
+        pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
+            let client: C = self.node.successor.client();
+            let result = client.predecessor().await;
+            if let Ok(Some(x)) = result {
+                if Node::is_between_on_ring(x.id.clone(), self.node.id, self.node.successor.id) {
+                    self.node.successor = x;
+                }
+            }
+
+            let client: C = self.node.successor.client();
+            client.notify(self.node.node_ref()).await?;
+
+            Ok(())
+        }
     //
     // /// Check predecessor
     // ///
