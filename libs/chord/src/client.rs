@@ -47,7 +47,7 @@ impl Display for ClientError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ClientError::ConnectionFailed(node) => write!(f, "Connection to node {} failed", node.addr()),
-            ClientError::Unexpected(message) => write!(f, "Unexpected error: {}", message),
+            ClientError::Unexpected(message) => write!(f, "{}", message),
         }
     }
 }

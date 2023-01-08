@@ -39,18 +39,22 @@ impl<C: Client> NodeService<C> {
     fn closest_preceding_node(&self, _id: u64) -> &NodeRef {
         &self.node.successor
     }
-    //
-    // /// Join the chord ring.
-    // ///
-    // /// This method is used to join the chord ring. It will find the successor of its own id
-    // /// and set it as the successor.
-    // ///
-    // /// # Arguments
-    // ///
-    // /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    // pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
-    //     todo!("not implemented")
-    // }
+
+    /// Join the chord ring.
+    ///
+    /// This method is used to join the chord ring. It will find the successor of its own id
+    /// and set it as the successor.
+    ///
+    /// # Arguments
+    ///
+    /// * `node` - The node to join the ring with. It's an existing node in the ring.
+    pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
+        let client: C = node.client();
+        let successor = client.find_successor(self.node.id).await?;
+        self.node.successor = successor;
+
+        Ok(())
+    }
     //
     // /// Notify the node about a potential new predecessor.
     // ///
@@ -93,16 +97,25 @@ impl<C: Client> NodeService<C> {
 }
 
 pub mod error {
+    use std::fmt::Display;
     use crate::client;
 
     #[derive(Debug)]
     pub enum ServiceError {
-        Unexpected,
+        Unexpected(String),
     }
 
     impl From<client::ClientError> for ServiceError {
-        fn from(_: client::ClientError) -> Self {
-            Self::Unexpected
+        fn from(err: client::ClientError) -> Self {
+            Self::Unexpected(format!("Client error: {}", err))
+        }
+    }
+
+    impl Display for ServiceError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::Unexpected(message) => write!(f, "{}", message),
+            }
         }
     }
 }

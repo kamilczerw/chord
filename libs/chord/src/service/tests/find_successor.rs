@@ -5,9 +5,6 @@ use crate::service::tests;
 
 #[tokio::test]
 async fn test_find_successor() {
-    let mut client = MockClient::new();
-    client.expect_find_successor()
-        .times(0);
     let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
     let node = Node::new(8, addr);
     let service: NodeService<MockClient> = NodeService::new(node);
@@ -22,7 +19,7 @@ async fn test_find_successor() {
 async fn find_successor_with_2_nodes() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
     let mut node = Node::new(8, addr);
-    node.successor = tests::node(16);
+    node.successor = tests::node_ref(16);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|_| {
@@ -30,7 +27,7 @@ async fn find_successor_with_2_nodes() {
         client.expect_find_successor()
             .times(1)
             .returning(|_| {
-                Box::pin(async { Ok(tests::node(6))})
+                Box::pin(async { Ok(tests::node_ref(6))})
             });
         client
     });
