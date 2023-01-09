@@ -24,11 +24,12 @@ async fn join_test() {
         client
     });
     let node = tests::node(1);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
+    let service = NodeService::<MockClient>::new(node);
+
 
     service.join(tests::node_ref(115)).await.unwrap();
 
-    assert_eq!(service.node.successor.id, 115);
+    assert_eq!(service.successor().id, 115);
 }
 
 #[tokio::test]
@@ -49,7 +50,8 @@ async fn join_error_test() {
         client
     });
     let node = tests::node(2);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
+
+    let service = NodeService::<MockClient>::new(node);
 
     let result = service.join(tests::node_ref(116)).await;
 

@@ -1,11 +1,13 @@
-mod client;
+pub mod client;
 mod service;
+mod node;
 
 use std::net::SocketAddr;
 use seahash::hash;
 
 pub use client::Client;
 pub use service::NodeService;
+use crate::node::NodeUpdateTask;
 
 /// A node in the chord ring
 ///
@@ -25,6 +27,7 @@ impl Node {
     /// * `id` - The id of the node
     /// * `socket_addr` - The socket address of the node
     pub fn new(id: u64, socket_addr: SocketAddr) -> Self {
+
         Self {
             id,
             socket_addr,
@@ -50,7 +53,7 @@ impl Node {
     /// Check if 10 is between 5 and 15
     ///
     /// ```
-    /// use chord::Node;
+    /// use chord_rs::Node;
     ///
     /// let id = 10;
     /// let node1 = 5;
@@ -61,7 +64,7 @@ impl Node {
     ///
     /// Check if 20 is between 15 and 5
     /// ```
-    /// use chord::Node;
+    /// use chord_rs::Node;
     ///
     /// let id = 20;
     /// let node1 = 15;

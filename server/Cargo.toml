@@ -6,3 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chord-rs = { path = "../libs/chord" }
+
+async-trait = "0.1.61"
+tokio = { version = "1.0.0", features = ["net", "rt", "macros", "time", "rt-multi-thread"] }
+tokio-util = { version = "0.7.4", features = ["compat"] }
+log = "0.4.17"
+log4rs = "1.2.0"

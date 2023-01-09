@@ -21,15 +21,15 @@ async fn when_predecessor_is_up_it_should_not_be_removed() {
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
-    service.node.predecessor = Some(tests::node_ref(12));
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    node.predecessor = Some(tests::node_ref(12));
+    let service = NodeService::<MockClient>::new(node);
 
     service.check_predecessor().await;
 
-    assert!(service.node.predecessor.is_some());
-    assert_eq!(service.node.predecessor.unwrap().id, 12);
+    assert!(service.predecessor().is_some());
+    assert_eq!(service.predecessor().unwrap().id, 12);
 }
 
 #[tokio::test]
@@ -50,14 +50,14 @@ async fn when_predecessor_is_down_it_should_be_removed() {
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
-    service.node.predecessor = Some(tests::node_ref(16));
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    node.predecessor = Some(tests::node_ref(16));
+    let service = NodeService::<MockClient>::new(node);
 
     service.check_predecessor().await;
 
-    assert!(service.node.predecessor.is_none());
+    assert!(service.predecessor().is_none());
 }
 
 #[tokio::test]
@@ -77,13 +77,13 @@ async fn when_ping_fails_with_unexpected_error_predecessor_should_not_be_removed
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
-    service.node.predecessor = Some(tests::node_ref(8));
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    node.predecessor = Some(tests::node_ref(8));
+    let service = NodeService::<MockClient>::new(node);
 
     service.check_predecessor().await;
 
-    assert!(service.node.predecessor.is_some());
-    assert_eq!(service.node.predecessor.unwrap().id, 8);
+    assert!(service.predecessor().is_some());
+    assert_eq!(service.predecessor().unwrap().id, 8);
 }

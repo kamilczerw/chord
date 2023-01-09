@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 use mockall::predicate;
+use tokio::time::sleep;
 use crate::client::{ClientError, MockClient};
 use crate::service::tests;
 use crate::{NodeRef, NodeService};
@@ -31,15 +32,16 @@ async fn stabilize_when_predecessor_is_between_node_and_successor_then_set_set_t
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    let service = NodeService::<MockClient>::new(node);
 
-    assert_eq!(service.node.successor.id, 16);
+    assert_eq!(service.successor().id, 16);
     let result = service.stabilize().await;
     assert!(result.is_ok());
 
-    assert_eq!(service.node.successor.id, 12);
+    sleep(tokio::time::Duration::from_millis(100)).await;
+    assert_eq!(service.successor().id, 12);
 }
 
 #[tokio::test]
@@ -63,15 +65,16 @@ async fn when_predecessor_is_not_between_node_and_successor_then_the_old_one_sho
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    let service = NodeService::<MockClient>::new(node);
 
-    assert_eq!(service.node.successor.id, 16);
+    assert_eq!(service.successor().id, 16);
     let result = service.stabilize().await;
     assert!(result.is_ok());
 
-    assert_eq!(service.node.successor.id, 16);
+    sleep(tokio::time::Duration::from_millis(100)).await;
+    assert_eq!(service.successor().id, 16);
 }
 
 #[tokio::test]
@@ -94,12 +97,13 @@ async fn when_getting_predecessor_fails_then_nothing_should_be_updated() {
         client
     });
 
-    let node = tests::node(8);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
-    service.node.successor = tests::node_ref(16);
+    let mut node = tests::node(8);
+    node.successor = tests::node_ref(16);
+    let service = NodeService::<MockClient>::new(node);
 
-    assert_eq!(service.node.successor.id, 16);
+    assert_eq!(service.successor().id, 16);
     let _ = service.stabilize().await;
 
-    assert_eq!(service.node.successor.id, 16);
+    sleep(tokio::time::Duration::from_millis(100)).await;
+    assert_eq!(service.successor().id, 16);
 }

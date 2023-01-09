@@ -2,21 +2,99 @@
 mod tests;
 
 use std::marker::PhantomData;
-use crate::{Client, Node, NodeRef};
+use std::sync::{Arc, RwLock};
+use std::sync::mpsc::{channel, sync_channel, SyncSender};
+use log::info;
+use crate::{Client, Node, NodeRef, NodeUpdateTask};
 use crate::client::ClientError;
 
 pub struct NodeService<C: Client> {
-    node: Node,
+    node: Arc<RwLock<Node>>,
     phantom: PhantomData<C>,
+
+    executor: TaskExecutor<NodeUpdateTask, NodeContext>,
+}
+
+impl Task<NodeContext> for NodeUpdateTask {
+    fn execute(&self, context: &NodeContext) {
+        info!("Executing task");
+        match self {
+            NodeUpdateTask::UpdateSuccessor(node_ref, tx) => {
+                let node = context.node.try_write();
+                node.unwrap().successor = node_ref.clone();
+                info!("Received update successor task for: {}", node_ref.id);
+                tx.send(()).unwrap();
+            }
+            NodeUpdateTask::UpdatePredecessor(node_ref, tx) => {
+                context.node.try_write().unwrap().predecessor = Some(node_ref.clone());
+                info!("Received update predecessor task for: {}", node_ref.id);
+                tx.send(()).unwrap();
+            }
+            NodeUpdateTask::UnsetPredecessor(tx) => {
+                context.node.try_write().unwrap().predecessor = None;
+                info!("Received unset predecessor task");
+                tx.send(()).unwrap();
+            }
+        }
+    }
+}
+
+trait Task<Ctx>: Sized {
+    fn execute(&self, ctx: &Ctx);
+}
+
+struct TaskExecutor<T: Task<Ctx>, Ctx: 'static> {
+    sender: SyncSender<T>,
+    phantom: PhantomData<Ctx>,
+}
+
+#[derive(Clone)]
+struct NodeContext {
+    node: Arc<RwLock<Node>>,
+}
+
+impl <T, Ctx> TaskExecutor<T, Ctx>
+where
+    T: Task<Ctx> + Send + 'static,
+    Ctx: Send
+{
+    fn new(ctx: Ctx) -> Self {
+        let (tx, rx) = sync_channel::<T>(10);
+        std::thread::spawn(move || {
+            while let Ok(task) = rx.recv() {
+                task.execute(&ctx);
+            }
+        });
+
+        Self {
+            sender: tx,
+            phantom: PhantomData,
+        }
+    }
+
+    fn execute(&self, task: T) {
+        self.sender.send(task).unwrap();
+    }
 }
 
 
 impl<C: Client> NodeService<C> {
-    pub fn new(node: Node) -> Self {
-        Self {
+    pub fn new(node: Node) -> Arc<Self> {
+        let node = Arc::new(RwLock::new(node));
+
+        let ctx = NodeContext {
+            node: Arc::clone(&node),
+        };
+
+        let task_executor = TaskExecutor::new(ctx);
+
+        let service = Arc::new(Self {
             node,
             phantom: PhantomData,
-        }
+            executor: task_executor,
+        });
+
+        service
     }
 
     /// Find the successor of the given id.
@@ -28,8 +106,12 @@ impl<C: Client> NodeService<C> {
     ///
     /// * `id` - The id to find the successor for
     pub async fn find_successor(&self, id: u64) -> Result<NodeRef, error::ServiceError> {
-        if Node::is_between_on_ring(id, self.node.id, self.node.successor.id) {
-            Ok(self.node.successor.clone())
+        let (node_id, successor) = {
+            let node = self.node.read().unwrap();
+            (node.id, node.successor.clone())
+        };
+        if Node::is_between_on_ring(id, node_id, successor.id) {
+            Ok(successor.clone())
         } else {
             let client: C = self.closest_preceding_node(id).client();
             let successor = client.find_successor(id).await?;
@@ -37,8 +119,8 @@ impl<C: Client> NodeService<C> {
         }
     }
 
-    fn closest_preceding_node(&self, _id: u64) -> &NodeRef {
-        &self.node.successor
+    fn closest_preceding_node(&self, _id: u64) -> NodeRef {
+        self.node.clone().read().unwrap().successor.clone()
     }
 
     /// Join the chord ring.
@@ -49,10 +131,16 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
-        let client: C = node.client();
-        let successor = client.find_successor(self.node.id).await?;
-        self.node.successor = successor;
+    pub async fn join(&self, node: NodeRef) -> Result<(), error::ServiceError> {
+        let successor = {
+            let self_node = self.node.read().unwrap();
+            let client: C = node.client();
+            client.find_successor(self_node.id).await?
+        };
+        let (tx, rx) = channel();
+        self.executor.execute(NodeUpdateTask::UpdateSuccessor(successor.clone(), tx));
+
+        rx.recv().unwrap();
 
         Ok(())
     }
@@ -65,9 +153,17 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node which might be the new predecessor
-    pub fn notify(&mut self, node: NodeRef) {
-        if self.node.predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), self.node.predecessor.as_ref().unwrap().id, self.node.id) {
-            self.node.predecessor = Some(node);
+    pub fn notify(&self, node: NodeRef) {
+        let node_id = {
+            let node = self.node.read().unwrap();
+            node.id
+        };
+        let predecessor = self.predecessor();
+        if predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), predecessor.as_ref().unwrap().id, node_id) {
+            let (tx, rx) = channel();
+            self.executor.execute(NodeUpdateTask::UpdatePredecessor(node.clone(), tx));
+            rx.recv().unwrap();
+            // self.node.predecessor = Some(node);
         }
     }
 
@@ -82,20 +178,29 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-        pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
-            let client: C = self.node.successor.client();
-            let result = client.predecessor().await;
-            if let Ok(Some(x)) = result {
-                if Node::is_between_on_ring(x.id.clone(), self.node.id, self.node.successor.id) {
-                    self.node.successor = x;
-                }
+    pub async fn stabilize(&self) -> Result<(), error::ServiceError> {
+        let (successor, node_id) = {
+            let node = self.node.read().unwrap();
+            (node.successor.clone(), node.id)
+        };
+        let client: C = successor.client();
+
+        let result = client.predecessor().await;
+        if let Ok(Some(x)) = result {
+            if Node::is_between_on_ring(x.id.clone(), node_id, successor.id) {
+                println!("Set the successor to {}", x.id);
+                let (tx, rx) = channel();
+                self.executor.execute(NodeUpdateTask::UpdateSuccessor(x, tx));
+                rx.recv().unwrap();
             }
-
-            let client: C = self.node.successor.client();
-            client.notify(self.node.node_ref()).await?;
-
-            Ok(())
         }
+
+        let node = self.node.read().unwrap();
+        let client: C = node.successor.client();
+        client.notify(node.node_ref()).await?;
+
+        Ok(())
+    }
 
     /// Check predecessor
     ///
@@ -105,13 +210,34 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-    pub async fn check_predecessor(&mut self) {
-        if let Some(predecessor) = &self.node.predecessor {
+    pub async fn check_predecessor(&self) {
+        let node = self.node.read().unwrap();
+        if let Some(predecessor) = &node.predecessor {
             let client: C = predecessor.client();
             if let Err(ClientError::ConnectionFailed(_)) = client.ping().await {
-                self.node.predecessor = None;
+                drop(node);
+                let (tx, rx) = channel();
+                self.executor.execute(NodeUpdateTask::UnsetPredecessor(tx));
+                rx.recv().unwrap();
+                // self.node.predecessor = None;
             };
         }
+    }
+
+    pub fn update_successor(&self, successor: NodeRef) {
+        let (tx, rx) = channel();
+        self.executor.execute(NodeUpdateTask::UpdateSuccessor(successor, tx));
+        rx.recv().unwrap();
+    }
+
+    pub fn successor(&self) -> NodeRef {
+        let node = self.node.read().unwrap();
+        node.successor.clone()
+    }
+
+    pub fn predecessor(&self) -> Option<NodeRef> {
+        let node = self.node.read().unwrap();
+        node.predecessor.clone()
     }
 }
 

@@ -9,7 +9,7 @@ async fn test_find_successor() {
     let _m = get_lock(&MTX);
     let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
     let node = Node::new(8, addr);
-    let service: NodeService<MockClient> = NodeService::new(node);
+    let service = NodeService::<MockClient>::new(node);
     let result = service.find_successor(10).await;
     assert!(result.is_ok());
     let successor = result.unwrap();
@@ -34,8 +34,9 @@ async fn find_successor_with_2_nodes() {
             });
         client
     });
+    
+    let service = NodeService::<MockClient>::new(node);
 
-    let service: NodeService<MockClient> = NodeService::new(node);
 
     assert_eq!(service.find_successor(10).await.unwrap().id, 16);
     assert_eq!(service.find_successor(2).await.unwrap().id, 6);
