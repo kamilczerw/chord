@@ -27,7 +27,7 @@ fn join_test() {
 
     service.join(tests::node(115)).unwrap();
 
-    assert_eq!(service.store.successor.id, 115);
+    assert_eq!(service.store.successor().id, 115);
 }
 
 #[test]

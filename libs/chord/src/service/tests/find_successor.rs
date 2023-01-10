@@ -31,7 +31,7 @@ fn find_successor_with_2_nodes() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node(16);
+    service.store.set_successor(tests::node(16));
 
     assert_eq!(service.find_successor(10).unwrap().id, 16);
     assert_eq!(service.find_successor(2).unwrap().id, 6);

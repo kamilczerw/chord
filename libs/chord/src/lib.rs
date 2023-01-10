@@ -9,7 +9,7 @@ pub use client::Client;
 pub use service::NodeService;
 
 /// A reference to a node in the chord ring
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Node {
     id: u64,
     addr: SocketAddr

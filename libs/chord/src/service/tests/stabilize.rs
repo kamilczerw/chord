@@ -32,13 +32,13 @@ fn stabilize_when_predecessor_is_between_node_and_successor_then_set_set_the_it_
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node(16);
+    service.store.set_successor(tests::node(16));
 
-    assert_eq!(service.store.successor.id, 16);
+    assert_eq!(service.store.successor().id, 16);
     let result = service.stabilize();
     assert!(result.is_ok());
 
-    assert_eq!(service.store.successor.id, 12);
+    assert_eq!(service.store.successor().id, 12);
 }
 
 #[test]
@@ -63,13 +63,13 @@ fn when_predecessor_is_not_between_node_and_successor_then_the_old_one_should_be
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node(16);
+    service.store.set_successor(tests::node(16));
 
-    assert_eq!(service.store.successor.id, 16);
+    assert_eq!(service.store.successor().id, 16);
     let result = service.stabilize();
     assert!(result.is_ok());
 
-    assert_eq!(service.store.successor.id, 16);
+    assert_eq!(service.store.successor().id, 16);
 }
 
 #[test]
@@ -93,10 +93,10 @@ fn when_getting_predecessor_fails_then_nothing_should_be_updated() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node(16);
+    service.store.set_successor(tests::node(16));
 
-    assert_eq!(service.store.successor.id, 16);
+    assert_eq!(service.store.successor().id, 16);
     let _ = service.stabilize();
 
-    assert_eq!(service.store.successor.id, 16);
+    assert_eq!(service.store.successor().id, 16);
 }
