@@ -22,8 +22,8 @@ fn when_predecessor_is_up_it_should_not_be_removed() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
-    service.store.predecessor = Some(tests::node_ref(12));
+    service.store.successor = tests::node(16);
+    service.store.predecessor = Some(tests::node(12));
 
     service.check_predecessor();
 
@@ -42,7 +42,7 @@ fn when_predecessor_is_down_it_should_be_removed() {
             client.expect_ping()
                 .times(1)
                 .returning(|| {
-                    Err(ClientError::ConnectionFailed(tests::node_ref(16)))
+                    Err(ClientError::ConnectionFailed(tests::node(16)))
                 });
         }
 
@@ -50,8 +50,8 @@ fn when_predecessor_is_down_it_should_be_removed() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
-    service.store.predecessor = Some(tests::node_ref(16));
+    service.store.successor = tests::node(16);
+    service.store.predecessor = Some(tests::node(16));
 
     service.check_predecessor();
 
@@ -76,8 +76,8 @@ fn when_ping_fails_with_unexpected_error_predecessor_should_not_be_removed() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
-    service.store.predecessor = Some(tests::node_ref(8));
+    service.store.successor = tests::node(16);
+    service.store.predecessor = Some(tests::node(8));
 
     service.check_predecessor();
 

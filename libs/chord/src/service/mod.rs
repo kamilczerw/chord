@@ -4,8 +4,9 @@ mod tests;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 use seahash::hash;
-use crate::{Client, NodeStore, NodeRef};
+use crate::{Client, Node};
 use crate::client::ClientError;
+use crate::node::store::NodeStore;
 
 pub struct NodeService<C: Client> {
     id: u64,
@@ -22,7 +23,7 @@ impl<C: Client> NodeService<C> {
     }
 
     fn with_id(id: u64, addr: SocketAddr) -> Self {
-        let store = NodeStore::new(NodeRef::with_id(id, addr));
+        let store = NodeStore::new(Node::with_id(id, addr));
         Self {
             id,
             addr,
@@ -39,8 +40,8 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `id` - The id to find the successor for
-    pub fn find_successor(&self, id: u64) -> Result<NodeRef, error::ServiceError> {
-        if NodeStore::is_between_on_ring(id, self.id, self.store.successor.id) {
+    pub fn find_successor(&self, id: u64) -> Result<Node, error::ServiceError> {
+        if Node::is_between_on_ring(id, self.id, self.store.successor.id) {
             Ok(self.store.successor.clone())
         } else {
             let client: C = self.closest_preceding_node(id).client();
@@ -57,7 +58,7 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    pub fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
+    pub fn join(&mut self, node: Node) -> Result<(), error::ServiceError> {
         let client: C = node.client();
         let successor = client.find_successor(self.id)?;
         self.store.successor = successor;
@@ -73,8 +74,8 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node which might be the new predecessor
-    pub fn notify(&mut self, node: NodeRef) {
-        if self.store.predecessor.is_none() || NodeStore::is_between_on_ring(node.id.clone(), self.store.predecessor.as_ref().unwrap().id, self.id) {
+    pub fn notify(&mut self, node: Node) {
+        if self.store.predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), self.store.predecessor.as_ref().unwrap().id, self.id) {
             self.store.predecessor = Some(node);
         }
     }
@@ -94,13 +95,13 @@ impl<C: Client> NodeService<C> {
             let client: C = self.store.successor.client();
             let result = client.predecessor();
             if let Ok(Some(x)) = result {
-                if NodeStore::is_between_on_ring(x.id.clone(), self.id, self.store.successor.id) {
+                if Node::is_between_on_ring(x.id.clone(), self.id, self.store.successor.id) {
                     self.store.successor = x;
                 }
             }
 
             let client: C = self.store.successor.client();
-            client.notify(NodeRef::with_id(self.id, self.addr))?;
+            client.notify(Node { id: self.id, addr: self.addr })?;
 
             Ok(())
         }
@@ -122,7 +123,7 @@ impl<C: Client> NodeService<C> {
         }
     }
 
-    fn closest_preceding_node(&self, _id: u64) -> &NodeRef {
+    fn closest_preceding_node(&self, _id: u64) -> &Node {
         &self.store.successor
     }
 }

@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use mockall::predicate;
 use crate::client::{ClientError, MockClient};
 use crate::service::tests;
-use crate::{NodeRef, NodeService};
+use crate::{Node, NodeService};
 use crate::service::tests::{get_lock, MTX};
 
 #[test]
@@ -16,13 +16,13 @@ fn stabilize_when_predecessor_is_between_node_and_successor_then_set_set_the_it_
             client.expect_predecessor()
                 .times(1)
                 .returning(|| {
-                    Ok(Some(tests::node_ref(12)))
+                    Ok(Some(tests::node(12)))
                 });
         }
 
         if addr.port() == 42012 {
             client.expect_notify()
-                .with(predicate::function(|n: &NodeRef| n.id == 8))
+                .with(predicate::function(|n: &Node| n.id == 8))
                 .times(1)
                 .returning(|_| {
                     Ok(())
@@ -32,7 +32,7 @@ fn stabilize_when_predecessor_is_between_node_and_successor_then_set_set_the_it_
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
+    service.store.successor = tests::node(16);
 
     assert_eq!(service.store.successor.id, 16);
     let result = service.stabilize();
@@ -51,10 +51,10 @@ fn when_predecessor_is_not_between_node_and_successor_then_the_old_one_should_be
         if addr.port() == 42016 {
             client.expect_predecessor()
                 .returning(|| {
-                    Ok(Some(tests::node_ref(1)))
+                    Ok(Some(tests::node(1)))
                 });
             client.expect_notify()
-                .with(predicate::function(|n: &NodeRef| n.id == 8))
+                .with(predicate::function(|n: &Node| n.id == 8))
                 .returning(|_| {
                     Ok(())
                 });
@@ -63,7 +63,7 @@ fn when_predecessor_is_not_between_node_and_successor_then_the_old_one_should_be
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
+    service.store.successor = tests::node(16);
 
     assert_eq!(service.store.successor.id, 16);
     let result = service.stabilize();
@@ -85,7 +85,7 @@ fn when_getting_predecessor_fails_then_nothing_should_be_updated() {
                 Err(error)
             });
         client.expect_notify()
-            .with(predicate::function(|n: &NodeRef| n.id == 8))
+            .with(predicate::function(|n: &Node| n.id == 8))
             .returning(|_| {
                 Ok(())
             });
@@ -93,7 +93,7 @@ fn when_getting_predecessor_fails_then_nothing_should_be_updated() {
     });
 
     let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    service.store.successor = tests::node_ref(16);
+    service.store.successor = tests::node(16);
 
     assert_eq!(service.store.successor.id, 16);
     let _ = service.stabilize();

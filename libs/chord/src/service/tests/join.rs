@@ -17,7 +17,7 @@ fn join_test() {
                 .with(predicate::eq(1))
                 .times(1)
                 .returning(|_| {
-                    Ok(tests::node_ref(115))
+                    Ok(tests::node(115))
                 });
         }
 
@@ -25,7 +25,7 @@ fn join_test() {
     });
     let mut service: NodeService<MockClient> = NodeService::with_id(1, SocketAddr::from(([127, 0, 0, 1], 42001)));
 
-    service.join(tests::node_ref(115)).unwrap();
+    service.join(tests::node(115)).unwrap();
 
     assert_eq!(service.store.successor.id, 115);
 }
@@ -49,7 +49,7 @@ fn join_error_test() {
     });
     let mut service: NodeService<MockClient> = NodeService::with_id(2, SocketAddr::from(([127, 0, 0, 1], 42001)));
 
-    let result = service.join(tests::node_ref(116));
+    let result = service.join(tests::node(116));
 
     assert!(result.is_err());
     let message = result.unwrap_err().to_string();
