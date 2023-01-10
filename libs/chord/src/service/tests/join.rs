@@ -5,8 +5,8 @@ use crate::NodeService;
 use crate::service::tests;
 use crate::service::tests::{get_lock, MTX};
 
-#[tokio::test]
-async fn join_test() {
+#[test]
+fn join_test() {
     let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
@@ -17,22 +17,21 @@ async fn join_test() {
                 .with(predicate::eq(1))
                 .times(1)
                 .returning(|_| {
-                    Box::pin(async { Ok(tests::node_ref(115))})
+                    Ok(tests::node(115))
                 });
         }
 
         client
     });
-    let node = tests::node(1);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
+    let mut service: NodeService<MockClient> = NodeService::with_id(1, SocketAddr::from(([127, 0, 0, 1], 42001)));
 
-    service.join(tests::node_ref(115)).await.unwrap();
+    service.join(tests::node(115)).unwrap();
 
-    assert_eq!(service.node.successor.id, 115);
+    assert_eq!(service.store.successor().id, 115);
 }
 
-#[tokio::test]
-async fn join_error_test() {
+#[test]
+fn join_error_test() {
     let _m = get_lock(&MTX);
     let ctx = MockClient::init_context();
 
@@ -43,15 +42,14 @@ async fn join_error_test() {
                 .with(predicate::eq(2))
                 .times(1)
                 .returning(|_| {
-                    Box::pin(async { Err(ClientError::Unexpected("Test".to_string())) })
+                    Err(ClientError::Unexpected("Test".to_string()))
                 });
         }
         client
     });
-    let node = tests::node(2);
-    let mut service: NodeService<MockClient> = NodeService::new(node);
+    let mut service: NodeService<MockClient> = NodeService::with_id(2, SocketAddr::from(([127, 0, 0, 1], 42001)));
 
-    let result = service.join(tests::node_ref(116)).await;
+    let result = service.join(tests::node(116));
 
     assert!(result.is_err());
     let message = result.unwrap_err().to_string();

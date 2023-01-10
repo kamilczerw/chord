@@ -1,5 +1,5 @@
 [package]
-name = "chord"
+name = "chord-rs"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,11 +7,9 @@ edition = "2021"
 
 [dependencies]
 seahash = "4.1.0"
-async-trait = "0.1.61"
 mockall = "0.11.3"
 
 log = "0.4.17"
 
 [dev-dependencies]
-tokio = { version = "1.24.1", features = ["macros", "test-util"] }
 lazy_static = "1.4.0"

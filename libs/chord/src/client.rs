@@ -1,9 +1,8 @@
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
-use crate::NodeRef;
+use crate::Node;
 use mockall::automock;
 
-#[async_trait::async_trait]
 #[automock]
 pub trait Client {
 
@@ -19,27 +18,27 @@ pub trait Client {
     /// # Arguments
     ///
     /// * `id` - The id to find the successor for
-    async fn find_successor(&self, id: u64) -> Result<NodeRef, ClientError>;
+    fn find_successor(&self, id: u64) -> Result<Node, ClientError>;
 
     /// Get the successor of the node
-    async fn successor(&self) -> Result<NodeRef, ClientError>;
+    fn successor(&self) -> Result<Node, ClientError>;
 
     /// Get the predecessor of the node
-    async fn predecessor(&self) -> Result<Option<NodeRef>, ClientError>;
+    fn predecessor(&self) -> Result<Option<Node>, ClientError>;
 
     /// Notify the node about a new predecessor
     ///
     /// # Arguments
     ///
     /// * `predecessor` - The new predecessor
-    async fn notify(&self, predecessor: NodeRef) -> Result<(), ClientError>;
+    fn notify(&self, predecessor: Node) -> Result<(), ClientError>;
 
     /// Ping the node
-    async fn ping(&self) -> Result<(), ClientError>;
+    fn ping(&self) -> Result<(), ClientError>;
 }
 
 pub enum ClientError {
-    ConnectionFailed(NodeRef),
+    ConnectionFailed(Node),
     Unexpected(String),
 }
 

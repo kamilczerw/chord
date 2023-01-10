@@ -2,19 +2,32 @@
 mod tests;
 
 use std::marker::PhantomData;
-use crate::{Client, Node, NodeRef};
+use std::net::SocketAddr;
+use seahash::hash;
+use crate::{Client, Node};
 use crate::client::ClientError;
+use crate::node::store::NodeStore;
 
 pub struct NodeService<C: Client> {
-    node: Node,
+    id: u64,
+    addr: SocketAddr,
+    store: NodeStore,
     phantom: PhantomData<C>,
 }
 
 
 impl<C: Client> NodeService<C> {
-    pub fn new(node: Node) -> Self {
+    pub fn new(socket_addr: SocketAddr) -> Self {
+        let id = hash(socket_addr.ip().to_string().as_bytes());
+        Self::with_id(id, socket_addr)
+    }
+
+    fn with_id(id: u64, addr: SocketAddr) -> Self {
+        let store = NodeStore::new(Node::with_id(id, addr));
         Self {
-            node,
+            id,
+            addr,
+            store,
             phantom: PhantomData,
         }
     }
@@ -27,18 +40,14 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `id` - The id to find the successor for
-    pub async fn find_successor(&self, id: u64) -> Result<NodeRef, error::ServiceError> {
-        if Node::is_between_on_ring(id, self.node.id, self.node.successor.id) {
-            Ok(self.node.successor.clone())
+    pub fn find_successor(&self, id: u64) -> Result<Node, error::ServiceError> {
+        if Node::is_between_on_ring(id, self.id, self.store.successor().id) {
+            Ok(self.store.successor().clone())
         } else {
             let client: C = self.closest_preceding_node(id).client();
-            let successor = client.find_successor(id).await?;
+            let successor = client.find_successor(id)?;
             Ok(successor)
         }
-    }
-
-    fn closest_preceding_node(&self, _id: u64) -> &NodeRef {
-        &self.node.successor
     }
 
     /// Join the chord ring.
@@ -49,10 +58,10 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    pub async fn join(&mut self, node: NodeRef) -> Result<(), error::ServiceError> {
+    pub fn join(&mut self, node: Node) -> Result<(), error::ServiceError> {
         let client: C = node.client();
-        let successor = client.find_successor(self.node.id).await?;
-        self.node.successor = successor;
+        let successor = client.find_successor(self.id)?;
+        self.store.set_successor(successor);
 
         Ok(())
     }
@@ -65,9 +74,10 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node which might be the new predecessor
-    pub fn notify(&mut self, node: NodeRef) {
-        if self.node.predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), self.node.predecessor.as_ref().unwrap().id, self.node.id) {
-            self.node.predecessor = Some(node);
+    pub fn notify(&mut self, node: Node) {
+        let predecessor = self.store.predecessor();
+        if predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), predecessor.unwrap().id, self.id) {
+            self.store.set_predecessor(node);
         }
     }
 
@@ -82,17 +92,17 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-        pub async fn stabilize(&mut self) -> Result<(), error::ServiceError> {
-            let client: C = self.node.successor.client();
-            let result = client.predecessor().await;
+        pub fn stabilize(&mut self) -> Result<(), error::ServiceError> {
+            let client: C = self.store.successor().client();
+            let result = client.predecessor();
             if let Ok(Some(x)) = result {
-                if Node::is_between_on_ring(x.id.clone(), self.node.id, self.node.successor.id) {
-                    self.node.successor = x;
+                if Node::is_between_on_ring(x.id.clone(), self.id, self.store.successor().id) {
+                    self.store.set_successor(x);
                 }
             }
 
-            let client: C = self.node.successor.client();
-            client.notify(self.node.node_ref()).await?;
+            let client: C = self.store.successor().client();
+            client.notify(Node { id: self.id, addr: self.addr })?;
 
             Ok(())
         }
@@ -105,13 +115,17 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-    pub async fn check_predecessor(&mut self) {
-        if let Some(predecessor) = &self.node.predecessor {
+    pub fn check_predecessor(&mut self) {
+        if let Some(predecessor) = self.store.predecessor() {
             let client: C = predecessor.client();
-            if let Err(ClientError::ConnectionFailed(_)) = client.ping().await {
-                self.node.predecessor = None;
+            if let Err(ClientError::ConnectionFailed(_)) = client.ping() {
+                self.store.unset_predecessor();
             };
         }
+    }
+
+    fn closest_preceding_node(&self, _id: u64) -> &Node {
+        self.store.successor()
     }
 }
 

@@ -1,28 +1,23 @@
 use std::net::SocketAddr;
 use crate::client::MockClient;
-use crate::{Node, NodeService};
+use crate::{NodeService};
 use crate::service::tests;
 use crate::service::tests::{get_lock, MTX};
 
-#[tokio::test]
-async fn test_find_successor() {
+#[test]
+fn test_find_successor() {
     let _m = get_lock(&MTX);
-    let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
-    let node = Node::new(8, addr);
-    let service: NodeService<MockClient> = NodeService::new(node);
-    let result = service.find_successor(10).await;
+    let service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
+    let result = service.find_successor(10);
     assert!(result.is_ok());
     let successor = result.unwrap();
 
     assert_eq!(successor.id, 8);
 }
 
-#[tokio::test]
-async fn find_successor_with_2_nodes() {
+#[test]
+fn find_successor_with_2_nodes() {
     let _m = get_lock(&MTX);
-    let addr = SocketAddr::from(([127, 0, 0, 1], 42001));
-    let mut node = Node::new(8, addr);
-    node.successor = tests::node_ref(16);
     let ctx = MockClient::init_context();
 
     ctx.expect().returning(|_| {
@@ -30,13 +25,14 @@ async fn find_successor_with_2_nodes() {
         client.expect_find_successor()
             .times(1)
             .returning(|_| {
-                Box::pin(async { Ok(tests::node_ref(6))})
+                Ok(tests::node(6))
             });
         client
     });
 
-    let service: NodeService<MockClient> = NodeService::new(node);
+    let mut service: NodeService<MockClient> = NodeService::with_id(8, SocketAddr::from(([127, 0, 0, 1], 42001)));
+    service.store.set_successor(tests::node(16));
 
-    assert_eq!(service.find_successor(10).await.unwrap().id, 16);
-    assert_eq!(service.find_successor(2).await.unwrap().id, 6);
+    assert_eq!(service.find_successor(10).unwrap().id, 16);
+    assert_eq!(service.find_successor(2).unwrap().id, 6);
 }
