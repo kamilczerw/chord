@@ -1,11 +1,12 @@
 use crate::Node;
+use crate::node::Finger;
 
 /// A node in the chord ring
 ///
 /// This struct is used to represent a node in the chord ring.
 pub struct NodeStore {
-    successor: Node,
     predecessor: Option<Node>,
+    pub(crate) finger_table: Vec<Finger>,
 }
 
 impl NodeStore {
@@ -17,8 +18,8 @@ impl NodeStore {
     /// * `socket_addr` - The socket address of the node
     pub(crate) fn new(successor: Node) -> Self {
         Self {
-            successor,
             predecessor: None,
+            finger_table: Finger::init_finger_table(successor.id, successor),
         }
     }
 
@@ -47,12 +48,12 @@ impl NodeStore {
     ///
     /// * `successor` - The successor node
     pub(crate) fn set_successor(&mut self, successor: Node) {
-        self.successor = successor;
+        self.finger_table[0].node = successor;
     }
 
     /// Get the successor of the node
     pub(crate) fn successor(&self) -> &Node {
-        &self.successor
+        &self.finger_table[0].node
     }
 }
 

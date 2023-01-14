@@ -124,7 +124,13 @@ impl<C: Client> NodeService<C> {
         }
     }
 
-    fn closest_preceding_node(&self, _id: u64) -> &Node {
+    fn closest_preceding_node(&self, id: u64) -> &Node {
+        for finger in self.store.finger_table.iter().rev() {
+            if finger.start > self.id && finger.node.id < id && finger.start < id {
+                return &finger.node;
+            }
+        }
+
         self.store.successor()
     }
 }

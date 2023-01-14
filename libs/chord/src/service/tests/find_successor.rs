@@ -36,3 +36,14 @@ fn find_successor_with_2_nodes() {
     assert_eq!(service.find_successor(10).unwrap().id, 16);
     assert_eq!(service.find_successor(2).unwrap().id, 6);
 }
+
+#[test]
+fn check_closest_preceding_node() {
+    let mut service: NodeService<MockClient> = NodeService::default();
+    service.with_fingers(vec![1, 10, 35, 129]);
+
+    assert_eq!(service.closest_preceding_node(11).id, 10);
+    assert_eq!(service.closest_preceding_node(35).id, 10);
+    assert_eq!(service.closest_preceding_node(100).id, 35);
+    assert_eq!(service.closest_preceding_node(150).id, 1);
+}
