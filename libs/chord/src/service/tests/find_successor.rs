@@ -38,10 +38,43 @@ fn find_successor_with_2_nodes() {
 }
 
 #[test]
+fn find_successor_using_finger_table_nodes() {
+    let _m = get_lock(&MTX);
+    let ctx = MockClient::init_context();
+
+    ctx.expect().returning(|addr: SocketAddr| {
+        let mut client = MockClient::new();
+        if addr.port() == 42035 {
+            client.expect_find_successor()
+                .times(1)
+                .returning(|_| {
+                    Ok(tests::node(111))
+                });
+        }
+
+        if addr.port() == 42001 {
+            client.expect_find_successor()
+                .times(1)
+                .returning(|_| {
+                    Ok(tests::node(5))
+                });
+        }
+        client
+    });
+
+    let mut service: NodeService<MockClient> = NodeService::default();
+    service.with_fingers(vec![1, 10, 35, 129]);
+
+    assert_eq!(service.find_successor(40).unwrap().id, 111);
+    assert_eq!(service.find_successor(2).unwrap().id, 5);
+}
+
+#[test]
 fn check_closest_preceding_node() {
     let mut service: NodeService<MockClient> = NodeService::default();
     service.with_fingers(vec![1, 10, 35, 129]);
 
+    assert_eq!(service.closest_preceding_node(2).id, 1);
     assert_eq!(service.closest_preceding_node(11).id, 10);
     assert_eq!(service.closest_preceding_node(35).id, 10);
     assert_eq!(service.closest_preceding_node(100).id, 35);

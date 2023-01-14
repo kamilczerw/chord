@@ -44,7 +44,8 @@ impl<C: Client> NodeService<C> {
         if Node::is_between_on_ring(id, self.id, self.store.successor().id) {
             Ok(self.store.successor().clone())
         } else {
-            let client: C = self.closest_preceding_node(id).client();
+            let n = self.closest_preceding_node(id);
+            let client: C = n.client();
             let successor = client.find_successor(id)?;
             Ok(successor)
         }
@@ -127,6 +128,9 @@ impl<C: Client> NodeService<C> {
     fn closest_preceding_node(&self, id: u64) -> &Node {
         for finger in self.store.finger_table.iter().rev() {
             if finger.start > self.id && finger.node.id < id && finger.start < id {
+                return &finger.node;
+            } else if id < self.id {
+                // if the id is smaller than the current node, we return the last finger
                 return &finger.node;
             }
         }

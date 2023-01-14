@@ -32,12 +32,20 @@ impl Finger {
         id as u64
     }
 
+    /// Initialize a new finger table for a given node id and its successor.
+    /// All the fingers in the table will point to the same successor.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The id of the node
+    /// * `node` - The successor of the node
     pub(crate) fn init_finger_table(id: u64, node: Node) -> Vec<Self> {
         let mut fingers = Vec::with_capacity(64);
 
-        for i in 1..65 {
+        // We start at 1 because the calculation of the finger id is based on the index
+        // of the finger. The calculation assumes that the index starts at 1.
+        for i in 1..64 {
             let finger_id = Self::finger_id(id, i);
-
             fingers.push(Finger { start: finger_id, node: node.clone() });
         }
 
