@@ -10,7 +10,7 @@ pub struct NodeStore {
 }
 
 impl NodeStore {
-    /// Create a new node
+    /// Create a new node store
     ///
     /// # Arguments
     ///
@@ -20,6 +20,14 @@ impl NodeStore {
         Self {
             predecessor: None,
             finger_table: Finger::init_finger_table(successor.id, successor),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn sized(size: u8, successor: Node) -> Self {
+        Self {
+            predecessor: None,
+            finger_table: Finger::init_sized_finger_table(size, successor.id, successor),
         }
     }
 

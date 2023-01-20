@@ -28,8 +28,12 @@ impl Node {
         self.addr
     }
 
-    fn with_id(id: u64, addr: SocketAddr) -> Self {
+    pub fn with_id(id: u64, addr: SocketAddr) -> Self {
         Self { id, addr }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 
     /// Returns true if the given id is between 2 nodes on a ring

@@ -93,20 +93,20 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-        pub fn stabilize(&mut self) -> Result<(), error::ServiceError> {
-            let client: C = self.store.successor().client();
-            let result = client.predecessor();
-            if let Ok(Some(x)) = result {
-                if Node::is_between_on_ring(x.id.clone(), self.id, self.store.successor().id) {
-                    self.store.set_successor(x);
-                }
+    pub fn stabilize(&mut self) -> Result<(), error::ServiceError> {
+        let client: C = self.store.successor().client();
+        let result = client.predecessor();
+        if let Ok(Some(x)) = result {
+            if Node::is_between_on_ring(x.id.clone(), self.id, self.store.successor().id) {
+                self.store.set_successor(x);
             }
-
-            let client: C = self.store.successor().client();
-            client.notify(Node { id: self.id, addr: self.addr })?;
-
-            Ok(())
         }
+
+        let client: C = self.store.successor().client();
+        client.notify(Node { id: self.id, addr: self.addr })?;
+
+        Ok(())
+    }
 
     /// Check predecessor
     ///
@@ -123,6 +123,25 @@ impl<C: Client> NodeService<C> {
                 self.store.unset_predecessor();
             };
         }
+    }
+
+    /// Fix fingers
+    ///
+    /// This method is used to fix the fingers. It iterates over all fingers and re-requests the
+    /// successor of the finger's id. Then sets the successor of the finger to the retrieved node.
+    ///
+    /// > **Note**
+    /// >
+    /// > This method should be called periodically.
+    pub fn fix_fingers(&mut self) {
+        let keys = self.store.finger_table.iter().map(|f| f.start)
+            .collect::<Vec<u64>>();
+
+        keys.iter().enumerate().for_each(|(i, key)| {
+            if let Ok(successor) =  self.find_successor(key.clone()) {
+                self.store.finger_table[i].node = successor;
+            }
+        });
     }
 
     fn closest_preceding_node(&self, id: u64) -> &Node {

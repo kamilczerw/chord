@@ -8,9 +8,11 @@ mod join;
 mod notify;
 mod stabilize;
 mod check_predecessor;
+mod fix_fingers;
 
 use lazy_static::lazy_static;
 use std::sync::{Mutex, MutexGuard};
+use mockall::predicate;
 use crate::node::Finger;
 use crate::node::store::NodeStore;
 
@@ -74,19 +76,67 @@ impl NodeService<MockClient> {
     }
 
     pub(crate) fn with_fingers(&mut self, nodes_ids: Vec<u64>) {
+        self.with_fingers_sized(64, nodes_ids);
+    }
+
+    pub(crate) fn with_fingers_sized(&mut self, size: u8, nodes_ids: Vec<u64>) {
         let mut nodes: Vec<Node> = nodes_ids.into_iter().map(|id| node(id)).collect();
         nodes.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut fingers = Vec::with_capacity(64);
 
-        for i in 1..65 {
-            let finger_id = Finger::finger_id(self.id, (i) as u8);
+        for i in 1..size+1 {
+            let finger_id = Finger::sized_finger_id(size, self.id, (i) as u8);
 
             let closest = Self::find_closest_successor(finger_id, &nodes);
             fingers.push(Finger { start: finger_id, node: closest });
         }
 
         self.store.finger_table = fingers;
+    }
+
+    pub(crate) fn collect_finger_ids(&self) -> Vec<u64> {
+        self.store.finger_table.iter().map(|f| f.start).collect()
+    }
+
+    pub(crate) fn collect_finger_node_ids(&self) -> Vec<u64> {
+        self.store.finger_table.iter().map(|f| f.node.id).collect()
+    }
+}
+
+impl MockClient {
+    /// Mock find_successor method.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The id for which to find the successor.
+    /// * `return_node` - The successor to return.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::net::SocketAddr;
+    /// use crate::client::MockClient;
+    /// use crate::service::tests::{get_lock, MTX};
+    ///
+    /// let _m = get_lock(&MTX);
+    /// let ctx = MockClient::init_context();
+    ///
+    /// ctx.expect().returning(|addr: SocketAddr| {
+    ///     let mut client = MockClient::new();
+    ///     // Node with port 42014 will respond with 21 as a successor for id 16.
+    ///     if addr.port() == 42014 { client.mock_find_successor(16, 21); }
+    ///
+    ///     client
+    /// });
+    /// ```
+    fn mock_find_successor(&mut self, id: u64, return_node: u64) {
+        self.expect_find_successor()
+            .with(predicate::eq(id))
+            .times(1)
+            .returning(move |_| {
+                Ok(node(return_node))
+            });
     }
 }
 
@@ -136,6 +186,17 @@ mod tests {
         assert_eq!(16, service.store.finger_table[2].node.id);
         assert_eq!(14, service.store.finger_table[4].start);
         assert_eq!(16, service.store.finger_table[4].node.id);
+
+        service.id = 1;
+        service.with_fingers_sized(6, nodes.clone());
+        assert_eq!(6, service.store.finger_table.len());
+
+        assert_eq!(16, service.store.finger_table[0].node.id);
+        assert_eq!(16, service.store.finger_table[1].node.id);
+        assert_eq!(5, service.store.finger_table[2].start);
+        assert_eq!(16, service.store.finger_table[2].node.id);
+        assert_eq!(17, service.store.finger_table[4].start);
+        assert_eq!(32, service.store.finger_table[4].node.id);
     }
 
     #[test]
