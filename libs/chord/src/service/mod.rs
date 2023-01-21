@@ -6,6 +6,7 @@ use std::net::SocketAddr;
 use seahash::hash;
 use crate::{Client, Node};
 use crate::client::ClientError;
+use crate::node::Finger;
 use crate::node::store::NodeStore;
 
 pub struct NodeService<C: Client> {
@@ -134,14 +135,12 @@ impl<C: Client> NodeService<C> {
     /// >
     /// > This method should be called periodically.
     pub fn fix_fingers(&mut self) {
-        let keys = self.store.finger_table.iter().map(|f| f.start)
-            .collect::<Vec<u64>>();
-
-        keys.iter().enumerate().for_each(|(i, key)| {
-            if let Ok(successor) =  self.find_successor(key.clone()) {
+        for i in 0..self.store.finger_table.len() {
+            let finger_id = Finger::finger_id(self.id, (i + 1) as u8);
+            if let Ok(successor) =  self.find_successor(finger_id) {
                 self.store.finger_table[i].node = successor;
             }
-        });
+        }
     }
 
     fn closest_preceding_node(&self, id: u64) -> &Node {

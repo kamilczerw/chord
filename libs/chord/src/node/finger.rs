@@ -43,43 +43,17 @@ impl Finger {
     ///
     /// * `id` - The id of the node
     /// * `node` - The successor of the node
-    pub(crate) fn init_finger_table(id: u64, node: Node) -> Vec<Self> {
-        Self::sized_finger_table(64, id, node)
+    pub(crate) fn init_finger_table(node: Node) -> Vec<Self> {
+        Self::sized_finger_table(64, node)
     }
 
-    #[cfg(test)]
-    /// Initialize a new finger table for a given node id and its successor with a specific size.
-    /// All the fingers in the table will point to the same successor.
-    /// This function is only used for testing.
-    /// The size of the finger table is 64 by default.
-    ///
-    /// # Arguments
-    ///
-    /// * `size` - The size of the finger table
-    /// * `id` - The id of the node
-    /// * `node` - The successor of the node
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use std::net::SocketAddr;
-    /// use chord_rs::Node;
-    ///
-    /// let node = Node::with_id(1, SocketAddr::from(([127, 0, 0, 1], 42001)));
-    /// let finger_table = Finger::init_sized_finger_table(6, node.id(), node);
-    /// assert_eq!(finger_table.len(), 6);
-    /// ```
-    pub(crate) fn init_sized_finger_table(size: u8, id: u64, node: Node) -> Vec<Self> {
-        Self::sized_finger_table(size, id, node)
-    }
-
-    fn sized_finger_table(size: u8, id: u64, node: Node) -> Vec<Self> {
+    fn sized_finger_table(size: u8, node: Node) -> Vec<Self> {
         let mut fingers = Vec::with_capacity(size as usize);
 
         // We start at 1 because the calculation of the finger id is based on the index
         // of the finger. The calculation assumes that the index starts at 1.
-        for i in 1..size+1 {
-            let finger_id = Self::sized_finger_id(size, id, i);
+        for i in 1..(size + 1) {
+            let finger_id = Self::sized_finger_id(size, node.id, i);
             fingers.push(Finger { start: finger_id, node: node.clone() });
         }
 
@@ -129,10 +103,9 @@ mod tests {
 
     #[test]
     fn it_should_generate_finger_table() {
-        let node_id: u64 = 1;
-        let node = Node::with_id(2, SocketAddr::from(([127, 0, 0, 1], 42001)));
+        let node = Node::with_id(1, SocketAddr::from(([127, 0, 0, 1], 42001)));
 
-        let fingers = Finger::init_finger_table(node_id, node.clone());
+        let fingers = Finger::init_finger_table(node.clone());
 
         assert_eq!(fingers.len(), 64);
         assert_eq!(fingers[0].start, 2);
@@ -144,7 +117,8 @@ mod tests {
         assert_eq!(fingers[15].start, 32769);
         assert_eq!(fingers[63].start, 9223372036854775809);
 
-        let fingers = Finger::sized_finger_table(6, 5, node);
+        let node = Node::with_id(5, SocketAddr::from(([127, 0, 0, 1], 42001)));
+        let fingers = Finger::sized_finger_table(6, node);
 
         assert_eq!(fingers.len(), 6);
         assert_eq!(fingers[0].start, 6);
