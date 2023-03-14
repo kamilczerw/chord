@@ -14,8 +14,7 @@ impl NodeStore {
     ///
     /// # Arguments
     ///
-    /// * `id` - The id of the node
-    /// * `socket_addr` - The socket address of the node
+    /// * `successor` - The immediate successor of the current node 
     pub(crate) fn new(successor: Node) -> Self {
         Self {
             predecessor: None,

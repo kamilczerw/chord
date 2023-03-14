@@ -36,13 +36,13 @@ impl Finger {
         id as u64
     }
 
-    /// Initialize a new finger table for a given node id and its successor.
-    /// All the fingers in the table will point to the same successor.
+    /// Initialize a new finger table for a node.
+    /// All the fingers in the table will point to the same node.
     ///
     /// # Arguments
     ///
-    /// * `id` - The id of the node
-    /// * `node` - The successor of the node
+    /// * `node` - The node which will fill the finger table.
+    ///            Usually it's the immediate successor of the node for which the finger table is being generated.
     pub(crate) fn init_finger_table(node: Node) -> Vec<Self> {
         Self::sized_finger_table(64, node)
     }
