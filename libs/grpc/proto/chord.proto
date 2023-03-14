@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package chord;
+
+service ChordNode {
+//  rpc FindSuccessor (FindSuccessorRequest) returns (FindSuccessorResponse);
+//  rpc GetPredecessor (GetPredecessorRequest) returns (GetPredecessorResponse);
+//  rpc Notify (NotifyRequest) returns (NotifyResponse);
+  rpc Ping (PingRequest) returns (PingResponse);
+}
+
+enum IpVersion {
+  IPV4 = 0;
+  IPV6 = 1;
+}
+
+message IpAddress {
+  IpVersion version = 1;
+  bytes address = 2;
+}
+
+message Node {
+  IpAddress ip = 1;
+  int32 port = 2;
+}
+
+message FindSuccessorRequest {
+  int64 id = 1;
+}
+
+message FindSuccessorResponse {
+  int64 id = 1;
+  Node node = 2;
+}
+
+message GetPredecessorRequest {
+}
+
+message GetPredecessorResponse {
+  optional Node node = 1;
+}
+
+message NotifyRequest {
+  Node node = 1;
+}
+
+message NotifyResponse {
+}
+
+message PingRequest {
+}
+
+message PingResponse {
+}
