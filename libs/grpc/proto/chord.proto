@@ -3,7 +3,7 @@ syntax = "proto3";
 package chord;
 
 service ChordNode {
-//  rpc FindSuccessor (FindSuccessorRequest) returns (FindSuccessorResponse);
+  rpc FindSuccessor (FindSuccessorRequest) returns (FindSuccessorResponse);
 //  rpc GetPredecessor (GetPredecessorRequest) returns (GetPredecessorResponse);
 //  rpc Notify (NotifyRequest) returns (NotifyResponse);
   rpc Ping (PingRequest) returns (PingResponse);
