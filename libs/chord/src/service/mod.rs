@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests;
 
+use crate::client::ClientError;
+use crate::node::store::NodeStore;
+use crate::node::Finger;
+use crate::{Client, Node};
+use seahash::hash;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
-use seahash::hash;
-use crate::{Client, Node};
-use crate::client::ClientError;
-use crate::node::Finger;
-use crate::node::store::NodeStore;
 
 pub struct NodeService<C: Client> {
     id: u64,
@@ -15,7 +15,6 @@ pub struct NodeService<C: Client> {
     store: NodeStore,
     phantom: PhantomData<C>,
 }
-
 
 impl<C: Client> NodeService<C> {
     pub fn new(socket_addr: SocketAddr) -> Self {
@@ -78,7 +77,9 @@ impl<C: Client> NodeService<C> {
     /// * `node` - The node which might be the new predecessor
     pub fn notify(&mut self, node: Node) {
         let predecessor = self.store.predecessor();
-        if predecessor.is_none() || Node::is_between_on_ring(node.id.clone(), predecessor.unwrap().id, self.id) {
+        if predecessor.is_none()
+            || Node::is_between_on_ring(node.id.clone(), predecessor.unwrap().id, self.id)
+        {
             self.store.set_predecessor(node);
         }
     }
@@ -104,7 +105,10 @@ impl<C: Client> NodeService<C> {
         }
 
         let client: C = self.store.successor().client();
-        client.notify(Node { id: self.id, addr: self.addr })?;
+        client.notify(Node {
+            id: self.id,
+            addr: self.addr,
+        })?;
 
         Ok(())
     }
@@ -137,7 +141,7 @@ impl<C: Client> NodeService<C> {
     pub fn fix_fingers(&mut self) {
         for i in 0..self.store.finger_table.len() {
             let finger_id = Finger::finger_id(self.id, (i + 1) as u8);
-            if let Ok(successor) =  self.find_successor(finger_id) {
+            if let Ok(successor) = self.find_successor(finger_id) {
                 self.store.finger_table[i].node = successor;
             }
         }
@@ -158,8 +162,8 @@ impl<C: Client> NodeService<C> {
 }
 
 pub mod error {
-    use std::fmt::Display;
     use crate::client;
+    use std::fmt::Display;
 
     #[derive(Debug)]
     pub enum ServiceError {

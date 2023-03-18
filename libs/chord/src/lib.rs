@@ -1,9 +1,9 @@
-mod client;
-mod service;
+pub mod client;
 mod node;
+mod service;
 
-use std::net::SocketAddr;
 use seahash::hash;
+use std::net::SocketAddr;
 
 pub use client::Client;
 pub use service::NodeService;
@@ -12,12 +12,15 @@ pub use service::NodeService;
 #[derive(Clone, PartialEq, Debug)]
 pub struct Node {
     id: u64,
-    addr: SocketAddr
+    addr: SocketAddr,
 }
 
 impl Node {
     pub fn new(addr: SocketAddr) -> Self {
-        Self { id: hash(&addr.to_string().as_bytes()), addr }
+        Self {
+            id: hash(&addr.to_string().as_bytes()),
+            addr,
+        }
     }
 
     pub fn client<C: Client>(&self) -> C {

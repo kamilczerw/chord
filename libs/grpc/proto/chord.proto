@@ -25,11 +25,11 @@ message Node {
 }
 
 message FindSuccessorRequest {
-  int64 id = 1;
+  uint64 id = 1;
 }
 
 message FindSuccessorResponse {
-  int64 id = 1;
+  uint64 id = 1;
   Node node = 2;
 }
 

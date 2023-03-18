@@ -1,11 +1,10 @@
-use std::fmt::{Display, Formatter};
-use std::net::SocketAddr;
 use crate::Node;
 use mockall::automock;
+use std::fmt::{Display, Formatter};
+use std::net::SocketAddr;
 
 #[automock]
 pub trait Client {
-
     /// Init the client
     ///
     /// # Arguments
@@ -45,7 +44,9 @@ pub enum ClientError {
 impl Display for ClientError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ClientError::ConnectionFailed(node) => write!(f, "Connection to node {} failed", node.addr()),
+            ClientError::ConnectionFailed(node) => {
+                write!(f, "Connection to node {} failed", node.addr())
+            }
             ClientError::Unexpected(message) => write!(f, "{}", message),
         }
     }
