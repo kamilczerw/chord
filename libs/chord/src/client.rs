@@ -1,9 +1,11 @@
 use crate::Node;
+use async_trait::async_trait;
 use mockall::automock;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 
 #[automock]
+#[async_trait]
 pub trait Client {
     /// Init the client
     ///
@@ -17,7 +19,7 @@ pub trait Client {
     /// # Arguments
     ///
     /// * `id` - The id to find the successor for
-    fn find_successor(&self, id: u64) -> Result<Node, ClientError>;
+    async fn find_successor(&self, id: u64) -> Result<Node, ClientError>;
 
     /// Get the successor of the node
     fn successor(&self) -> Result<Node, ClientError>;

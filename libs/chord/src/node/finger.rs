@@ -1,5 +1,6 @@
 use crate::Node;
 
+#[derive(Debug)]
 pub struct Finger {
     pub(crate) start: u64,
     pub node: Node,
@@ -54,7 +55,10 @@ impl Finger {
         // of the finger. The calculation assumes that the index starts at 1.
         for i in 1..(size + 1) {
             let finger_id = Self::sized_finger_id(size, node.id, i);
-            fingers.push(Finger { start: finger_id, node: node.clone() });
+            fingers.push(Finger {
+                start: finger_id,
+                node: node.clone(),
+            });
         }
 
         fingers
@@ -63,8 +67,8 @@ impl Finger {
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
     use super::*;
+    use std::net::SocketAddr;
 
     #[test]
     fn it_should_generate_finger_id() {

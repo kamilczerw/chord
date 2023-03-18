@@ -9,6 +9,7 @@ use seahash::hash;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
+#[derive(Debug)]
 pub struct NodeService<C: Client> {
     id: u64,
     addr: SocketAddr,
@@ -40,13 +41,13 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `id` - The id to find the successor for
-    pub fn find_successor(&self, id: u64) -> Result<Node, error::ServiceError> {
+    pub async fn find_successor(&self, id: u64) -> Result<Node, error::ServiceError> {
         if Node::is_between_on_ring(id, self.id, self.store.successor().id) {
             Ok(self.store.successor().clone())
         } else {
             let n = self.closest_preceding_node(id);
             let client: C = n.client();
-            let successor = client.find_successor(id)?;
+            let successor = client.find_successor(id).await?;
             Ok(successor)
         }
     }
@@ -59,9 +60,9 @@ impl<C: Client> NodeService<C> {
     /// # Arguments
     ///
     /// * `node` - The node to join the ring with. It's an existing node in the ring.
-    pub fn join(&mut self, node: Node) -> Result<(), error::ServiceError> {
+    pub async fn join(&mut self, node: Node) -> Result<(), error::ServiceError> {
         let client: C = node.client();
-        let successor = client.find_successor(self.id)?;
+        let successor = client.find_successor(self.id).await?;
         self.store.set_successor(successor);
 
         Ok(())
@@ -138,10 +139,11 @@ impl<C: Client> NodeService<C> {
     /// > **Note**
     /// >
     /// > This method should be called periodically.
-    pub fn fix_fingers(&mut self) {
+    pub async fn fix_fingers(&mut self) {
         for i in 0..self.store.finger_table.len() {
             let finger_id = Finger::finger_id(self.id, (i + 1) as u8);
-            if let Ok(successor) = self.find_successor(finger_id) {
+            let result = { self.find_successor(finger_id).await };
+            if let Ok(successor) = result {
                 self.store.finger_table[i].node = successor;
             }
         }

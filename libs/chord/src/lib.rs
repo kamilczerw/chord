@@ -8,6 +8,8 @@ use std::net::SocketAddr;
 pub use client::Client;
 pub use service::NodeService;
 
+pub use service::error;
+
 /// A reference to a node in the chord ring
 #[derive(Clone, PartialEq, Debug)]
 pub struct Node {
