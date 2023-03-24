@@ -1,9 +1,14 @@
-use std::net::{IpAddr, SocketAddr};
+use std::{
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+    thread,
+};
 
 use chord_proto::chord_node_server::ChordNode;
 pub use chord_proto::chord_node_server::ChordNodeServer;
 use chord_proto::{PingRequest, PingResponse};
 use chord_rs::NodeService;
+use tokio::task::JoinHandle;
 pub use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
@@ -17,14 +22,32 @@ pub mod chord_proto {
 
 #[derive(Debug)]
 pub struct ChordService {
-    node: NodeService<ChordGrpcClient>,
+    node: Arc<NodeService<ChordGrpcClient>>,
+    join_handle: Option<JoinHandle<()>>,
 }
 
 impl ChordService {
     pub fn new(addr: SocketAddr) -> Self {
-        Self {
-            node: NodeService::new(addr),
-        }
+        let node_service = Arc::new(NodeService::new(addr));
+        let mut s = Self {
+            node: node_service.clone(),
+            join_handle: None,
+        };
+
+        let handle = {
+            // let ref this = s;
+            tokio::spawn(async move {
+                let service = node_service.clone();
+                service.find_successor(1);
+                // self.node.fix_fingers().await;
+                // Process each socket concurrently.
+                println!("Start background jobs");
+            })
+        };
+
+        s.join_handle = Some(handle);
+
+        s
     }
 
     fn map_error(error: chord_rs::error::ServiceError) -> Status {

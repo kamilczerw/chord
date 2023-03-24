@@ -866,6 +866,7 @@ dependencies = [
  "async-trait",
  "chord-rs",
  "prost",
+ "tokio",
  "tonic",
  "tonic-build",
 ]
